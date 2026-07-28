@@ -46,61 +46,48 @@ def init_firebase():
     if firebase_admin._apps:
         return firestore.client()
 
-    cred_dict = None
-
-    # -- Option 1a: TOML table [firebase_credentials] in Streamlit secrets --
-    # Paste this in Settings -> Secrets on Streamlit Cloud:
-    #
-    #   [firebase_credentials]
-    #   type = "service_account"
-    #   project_id = "talent-tracker-ai-dev"
-    #   private_key_id = "..."
-    #   private_key = "-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----\n"
-    #   client_email = "firebase-adminsdk-...@....iam.gserviceaccount.com"
-    #   client_id = "..."
-    #   auth_uri = "https://accounts.google.com/o/oauth2/auth"
-    #   token_uri = "https://oauth2.googleapis.com/token"
-    #   auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
-    #   client_x509_cert_url = "https://www.googleapis.com/..."
-    #   universe_domain = "googleapis.com"
-    #
-    if "firebase_credentials" in st.secrets:
-        raw = st.secrets["firebase_credentials"]
-        if isinstance(raw, str):
-            # Option 1b: user pasted the whole JSON as one string value
-            cred_dict = json.loads(raw)
-        else:
-            # Normal TOML table -- iterate key/value pairs
-            cred_dict = {k: v for k, v in raw.items()}
-
-    # -- Option 2: whole JSON blob under key FIREBASE_KEY ----------------
-    # FIREBASE_KEY = '{ "type": "service_account", ... }'
-    elif "FIREBASE_KEY" in st.secrets:
-        cred_dict = json.loads(st.secrets["FIREBASE_KEY"])
-
-    # -- Option 3: local service-account JSON file (local dev) -----------
-    else:
-        sa_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "serviceAccount.json")
-        if os.path.exists(sa_path):
-            with open(sa_path, encoding="utf-8") as f:
-                cred_dict = json.load(f)
-
-    if cred_dict is None:
-        found_keys = list(st.secrets.keys()) if hasattr(st, "secrets") else []
-        st.error(
-            "**Firebase credentials not found.**\n\n"
-            f"Secret keys the app can see: `{found_keys}`\n\n"
-            "Expected one of:\n"
-            "- TOML table `[firebase_credentials]` with all service-account fields\n"
-            "- `firebase_credentials = \'<JSON string>\'`\n"
-            "- `FIREBASE_KEY = \'<JSON string>\'`\n\n"
-            "See **DEPLOY.md** for the exact format."
-        )
-        st.stop()
-
-    # private_key may arrive with literal backslash-n instead of real newlines
-    if "private_key" in cred_dict:
-        cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
+    cred_dict = {
+        "type": "service_account",
+        "project_id": "talent-tracker-ai-dev",
+        "private_key_id": "d0afd1f538b1dd75893b29e68f728ac253e05ec9",
+        "private_key": (
+            "-----BEGIN PRIVATE KEY-----\n"
+            "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDQgE0yfTmvL79M\n"
+            "GtQTTmj9dZ821Izf9Vg4hudDd9BrMjXzHeGpOQZVNHekc+OgoTKUhdPZUiakDr93\n"
+            "9ZBD2vA1v5le26LIRoMmDyX03+uzDSFVCe8Lt73Omlu78pffWF7jtgBQHF4RV0av\n"
+            "s77xsE8HrvFxOOnF7yvplezhUVZCYok2po1Pg63f995dbjn+dpiMVkehEVzDUmdO\n"
+            "B0XqtqWnWLQThbsanK2kpsSPSxzQmW3UBIgj4Af2Oaz8LyraUrbCKyP+Pz1f5zYa\n"
+            "uAvpacpjYvhmT8gxdeOHvQDm7FrgjUKZ6J4kkqHvX6JNOsdgDBUQmYZcanN2o1S/\n"
+            "/+Aubd/dAgMBAAECggEAFCNwUWIbAjrAZV9qAHtgVKrZt/gLq04NOVh+Wdvmu5Pb\n"
+            "9iF6vFePrwckTzQKVmd7dTD/50uyA8KQ58tGJeetr+NTsv/P1zxISpLH/cDrCR5J\n"
+            "i+cruZwDr0LlfV/PH3lvoNrhaNt0koQ1hZ784GdBGuLg2yi+G6ogOa2Lda/ffwXM\n"
+            "xciG7guRPOUprfcKMD9btQSSb4Ju89HvJqF18HFae+LxkyykFc1wGRw7mPmt9Y+A\n"
+            "qALmVFrAumMp4Xf57WMpnsL3A5VIA1hJzCiE7qgdZ5BAwG2U5jQbR9fByHzLiLwH\n"
+            "EHeJp6StdFUH/QejYFSQsR6EqNBmIZiOukZIDDFaWQKBgQDvzMG3V+z54o/rfVWm\n"
+            "X6zUP/Jz9xuKZOe2GM9iqPFlzTX/lzx+vz0x9+fiifAXqKGfD2Xin8peZYnA7/b/\n"
+            "1Mft5JsQEayEsiRxytJooAnHY2I+EKZ4GRQwrw/sVsjfkHQSyFsL5G5DQaE1vg9m\n"
+            "buz3tLEL3zQitKsu/GiNUBUKtwKBgQDelj88bMU9owqqW2qBsVQ+Qd0YVOpRREFS\n"
+            "JUJhMsEq7wbnCJy9G35N3zRMf0cqZNCmloiNHnMfC2TE9HHxsz0Dgos72+YhPMCy\n"
+            "0qy7V7rscjnR2DIdtnhytPbICUfMTCcbamaUd7JHLmlmu6vOn24tteJCYdSRi+kX\n"
+            "AmXPK0rmCwKBgGDlyjk9zEJFLIapxJxP+NRjaqM1bOmFUKQiblqdjb3nKDS5dfZ5\n"
+            "bE7ur8K4nk3RFE3juPXUP7/ZI8rUrGhAIPGd+JKLsbyFB3j7zf38/TaWkDIoJDxP\n"
+            "Vfs+Ih8MCmtcQar9Tt0FVxDSSkQfIrXviM2nNAtqC/UiMDHySIUhoP8NAoGBAJ2H\n"
+            "nC15lYZv02aJ2DD9fW+qUX2c61Cki85FTFtZ/lgSXsI32CYGRTd7lpnlIkqgmwKr\n"
+            "Wuz09eisuZ6imdnDTpUjWML+eDphssdcTp8wEbyxgrY+2gkpUMltxZIA721pH+xJ\n"
+            "O1wr8mJqOHJas9dCAkobhYwRjM2NRWPhcIhUTWfNAoGAQNFEHIEyGg/jcJToJpkx\n"
+            "aqqmS7hj4/L2hU6vph6b7EPq6QmDIAFR8T0bAL54lfJEMb6QpAOVXCHU/MytsY4E\n"
+            "JWYOk6UssaO4v+jTFfewWb86XQKdXnoIgIol1cPb3vyIz7Op9GxKpwcKMfNtLvAB\n"
+            "W25f64+57qxL6u533dlUkNg=\n"
+            "-----END PRIVATE KEY-----\n"
+        ),
+        "client_email": "firebase-adminsdk-fbsvc@talent-tracker-ai-dev.iam.gserviceaccount.com",
+        "client_id": "100950955150685448502",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40talent-tracker-ai-dev.iam.gserviceaccount.com",
+        "universe_domain": "googleapis.com",
+    }
 
     cred = credentials.Certificate(cred_dict)
     firebase_admin.initialize_app(cred)
