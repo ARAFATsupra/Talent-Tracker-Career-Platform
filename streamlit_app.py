@@ -46,39 +46,65 @@ def init_firebase():
     if firebase_admin._apps:
         return firestore.client()
 
-    cred = None
+    cred_dict = None
 
-    # ── Option 1: Streamlit Cloud secrets ──────────────────────────────
-    # Add a [firebase_credentials] table to your app's Secrets in the
-    # Streamlit Cloud dashboard (Settings → Secrets).  Every key from the
-    # service-account JSON goes there as a plain key = "value" pair.
+    # -- Option 1a: TOML table [firebase_credentials] in Streamlit secrets --
+    # Paste this in Settings -> Secrets on Streamlit Cloud:
+    #
+    #   [firebase_credentials]
+    #   type = "service_account"
+    #   project_id = "talent-tracker-ai-dev"
+    #   private_key_id = "..."
+    #   private_key = "-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----\n"
+    #   client_email = "firebase-adminsdk-...@....iam.gserviceaccount.com"
+    #   client_id = "..."
+    #   auth_uri = "https://accounts.google.com/o/oauth2/auth"
+    #   token_uri = "https://oauth2.googleapis.com/token"
+    #   auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
+    #   client_x509_cert_url = "https://www.googleapis.com/..."
+    #   universe_domain = "googleapis.com"
+    #
     if "firebase_credentials" in st.secrets:
-        cred_dict = {k: v for k, v in st.secrets["firebase_credentials"].items()}
-        # private_key comes through with literal \n — convert to real newlines.
-        if "private_key" in cred_dict:
-            cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
-        cred = credentials.Certificate(cred_dict)
+        raw = st.secrets["firebase_credentials"]
+        if isinstance(raw, str):
+            # Option 1b: user pasted the whole JSON as one string value
+            cred_dict = json.loads(raw)
+        else:
+            # Normal TOML table -- iterate key/value pairs
+            cred_dict = {k: v for k, v in raw.items()}
 
-    # ── Option 2: local JSON file (for local dev) ───────────────────────
-    # Set GOOGLE_APPLICATION_CREDENTIALS=path/to/serviceAccount.json
-    # or place serviceAccount.json in the project root.
-    elif os.path.exists(
-        os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "serviceAccount.json")
-    ):
-        sa_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "serviceAccount.json")
-        cred = credentials.Certificate(sa_path)
+    # -- Option 2: whole JSON blob under key FIREBASE_KEY ----------------
+    # FIREBASE_KEY = '{ "type": "service_account", ... }'
+    elif "FIREBASE_KEY" in st.secrets:
+        cred_dict = json.loads(st.secrets["FIREBASE_KEY"])
 
+    # -- Option 3: local service-account JSON file (local dev) -----------
     else:
+        sa_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "serviceAccount.json")
+        if os.path.exists(sa_path):
+            with open(sa_path, encoding="utf-8") as f:
+                cred_dict = json.load(f)
+
+    if cred_dict is None:
+        found_keys = list(st.secrets.keys()) if hasattr(st, "secrets") else []
         st.error(
             "**Firebase credentials not found.**\n\n"
-            "Add your service-account key to Streamlit secrets under "
-            "`[firebase_credentials]`. See **DEPLOY.md** for instructions."
+            f"Secret keys the app can see: `{found_keys}`\n\n"
+            "Expected one of:\n"
+            "- TOML table `[firebase_credentials]` with all service-account fields\n"
+            "- `firebase_credentials = \'<JSON string>\'`\n"
+            "- `FIREBASE_KEY = \'<JSON string>\'`\n\n"
+            "See **DEPLOY.md** for the exact format."
         )
         st.stop()
 
+    # private_key may arrive with literal backslash-n instead of real newlines
+    if "private_key" in cred_dict:
+        cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
+
+    cred = credentials.Certificate(cred_dict)
     firebase_admin.initialize_app(cred)
     return firestore.client()
-
 
 db = init_firebase()
 
