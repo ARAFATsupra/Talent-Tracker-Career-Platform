@@ -1,61 +1,51 @@
-# Talent Tracker AI
+# Talent Tracker
 
-> **Empowering Students to Build Smarter Careers**
+## AI-Powered Career Roadmap Platform
 
-Talent Tracker AI is a Flutter-based mobile application that helps students plan their careers through personalized career roadmaps, skill gap analysis, learning resources, and progress tracking.
+Talent Tracker is a mobile app that helps students plan their careers. It helps users find the skills they need, follow a learning roadmap, track their progress and prepare for future job opportunities.
 
-The current version focuses on the core application and user experience. AI-powered career recommendations are planned for future releases.
-
----
-
-## Overview
-
-Choosing the right career can be difficult for many students. Career information is often scattered across different platforms, making it hard to identify the skills required for a specific profession.
-
-Talent Tracker AI provides a centralized platform where students can:
-
-- Explore career paths
-- Build personalized learning roadmaps
-- Identify skill gaps
-- Track their progress
-- Prepare for future job opportunities
+The current version focuses on the main features of the app. Smart career recommendations will be added in future updates.
 
 ---
 
-## Features
+# About the Project
 
--  User Authentication
--  Student Dashboard
--  Personalized Career Roadmap
--  Learning Resource Suggestions
--  Skill Gap Analysis
--  Progress Tracking
--  Student Profile Management
--  Modern Flutter UI
--  Firebase Integration
+Many students finish their studies without knowing which career is right for them. They also find it difficult to know what skills they should learn. Career information is available on many different websites which makes the process confusing.
+
+Talent Tracker brings everything together in one place. It helps students learn new skills, plan their careers and stay on track.
 
 ---
 
-## AI (Planned Features)
+# Features
 
-The current version **does not implement the AI recommendation engine**.
-
-Future versions will include:
-
-- AI Career Advisor
-- Career Recommendation Engine
-- Skill Gap Detection
-- Personalized Learning Paths
-- Resume Analysis
-- AI Interview Coach
-- Job & Internship Matching
-- Explainable Career Recommendations
+- User Registration and Login
+- Student Dashboard
+- Career Roadmap
+- Skill Gap Analysis
+- Learning Resource Suggestions
+- Progress Tracking
+- User Profile
+- Simple and Easy User Interface
 
 ---
 
-## Tech Stack
+# Future Features
 
-### Frontend
+The following features are planned for future versions.
+
+- Smart Career Recommendations
+- Resume Review
+- Internship Recommendations
+- Job Matching
+- Interview Practice
+- Mentor Support
+- Multiple Language Support
+
+---
+
+# Technologies Used
+
+### Mobile App
 - Flutter
 - Dart
 
@@ -63,36 +53,31 @@ Future versions will include:
 - Firebase Authentication
 - Cloud Firestore
 - Firebase Storage
-- Firebase Analytics
-- Firebase Cloud Messaging
 
-### Development
+### Tools
 - Git
 - GitHub
 
 ---
 
-## Project Architecture
+# Project Structure
 
 ```
-Flutter Mobile App
-        │
-        ▼
-Firebase Authentication
-        │
-        ▼
-Cloud Firestore
-        │
-        ▼
-Application Logic
-        │
-        ▼
-Future AI Recommendation Engine
+lib/
+├── models/
+├── screens/
+├── widgets/
+├── services/
+├── providers/
+├── utils/
+└── main.dart
 ```
 
 ---
 
-## Application Screens
+# App Screens
+
+The app includes the following screens.
 
 - Login
 - Registration
@@ -103,67 +88,39 @@ Future AI Recommendation Engine
 
 ---
 
-## Project Goals
+# Project Goal
 
-- Help students choose suitable career paths
-- Reduce the skill gap between education and industry
-- Provide structured learning roadmaps
-- Improve career planning
-- Support universities in student placement
+The goal of this project is to:
 
----
-
-## Future Scope
-
-- AI-powered Career Recommendations
-- Resume Scoring
-- Mock Interview AI
-- Internship Recommendation
-- Job Matching
-- Mentor Matching
-- LinkedIn Integration
-- Alumni Network
-- Multilingual Support
+- Help students choose the right career
+- Show the skills needed for different careers
+- Help students plan their learning
+- Improve career preparation
+- Support better placement opportunities
 
 ---
 
-## Folder Structure
+# Getting Started
 
-```
-lib/
- ├── models/
- ├── screens/
- ├── widgets/
- ├── services/
- ├── providers/
- ├── utils/
- ├── firebase/
- └── main.dart
-```
-
----
-
-## ⚙ Getting Started
-
-### Clone Repository
+### Clone the repository
 
 ```bash
-git clone https://github.com/your-username/talent_tracker_ai.git
+git clone https://github.com/your-username/talent_tracker.git
 ```
 
-### Go to Project
+### Open the project
 
 ```bash
-cd talent_tracker_ai
+cd talent_tracker
 ```
 
-### Install Packages
+### Install packages
 
 ```bash
 flutter pub get
 ```
 
-### Run the Application
+### Run the app
 
 ```bash
 flutter run
@@ -171,73 +128,60 @@ flutter run
 
 ---
 
-## Firebase Configuration
+# Firebase Setup
 
-Create a Firebase project and configure:
+Create a Firebase project and enable:
 
 - Firebase Authentication
 - Cloud Firestore
 - Firebase Storage
-- Firebase Analytics
-- Firebase Cloud Messaging
 
-Then add:
+Then add the Firebase configuration files to the project.
 
-- `google-services.json` (Android)
-- `GoogleService-Info.plist` (iOS)
+- `google-services.json` for Android
+- `GoogleService-Info.plist` for iOS
 
 ---
 
-## Academic Information
+# Team Members
 
-**Project Title**
-
-Talent Tracker AI – Career Roadmap Platform
-
-**Institution**
-
-Daffodil International University
-
-Department of Information Technology & Management
+- Tamim Hossain
+- Kazi Arafat Hossain
+- Tithi Tarafdar
+- Sumaiya Akter Nipa
+- Fariya Yesmin
 
 ---
 
-## Team Members
+# Project Status
 
-- Tamim Hossain — Project Lead
-- Kazi Arafat Hossain — Technical Lead
-- Tithi Tarafdar — Flutter Developer & UI/UX Designer
-- Sumaiya Akter Nipa — QA & Testing
-- Fariya Yesmin — Assistant
+Current Version: Prototype
 
----
+Completed
 
-## Repository Status
+- Mobile application
+- User interface
+- User authentication
+- Database connection
+- Career roadmap
+- Progress tracking
 
-**Current Version:** MVP (Prototype)
+Coming Soon
 
-### Completed
-- Flutter UI
-- Authentication
-- Database Integration
-- Career Roadmap Module
-- Progress Tracking
-
-### Planned
-- AI Recommendation Engine
-- LLM Integration
-- Smart Career Matching
-- Resume Analysis
-- Predictive Career Analytics
+- Smart career recommendations
+- Resume review
+- Internship suggestions
+- Job matching
+- Interview practice
 
 ---
 
-## License
+# License
 
-This project was developed as an academic project for educational purposes.
+This project was developed for academic purposes at Daffodil International University.
 
 ---
 
-## ⭐ Support
+# Contact
 
-If you found this project useful, consider giving it a ⭐ on GitHub.
+If you have any questions or suggestions feel free to create an issue or contact our team through GitHub.
