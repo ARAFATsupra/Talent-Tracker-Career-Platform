@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "127786425302",
+    "project_id": "talent-tracker-ai-dev",
+    "storage_bucket": "talent-tracker-ai-dev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:127786425302:android:2d8a138bb02becdb24e277",
+        "android_client_info": {
+          "package_name": "com.diu.talenttrackerai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0CHuNZ8sP_-JJl8QW-FmwIdqnOqrlqqw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
