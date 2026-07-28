@@ -1,0 +1,188 @@
+rules_version = '2';
+
+// Section 9.5 — Firestore Security Rules — Access Matrix.
+// Phase 2 implements the `users` collection (and its `semesters`
+// sub-collection) rules. Every other collection is locked down with
+// `allow read, write: if false` until its phase is built — this is safer
+// than leaving them unspecified (which Firestore treats as fully denied
+// anyway, but being explicit documents intent).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // --- users/{uid} — Section 9.2 ---
+    // Read/write: the owner, or an Admin.
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+
+      // FR-01 / FR-03 — a brand-new user creates their OWN profile doc
+      // right after Firebase Auth registration.
+      allow create: if isOwner(uid);
+
+      allow update: if isOwner(uid) || isAdmin();
+      // S-06 Profile Settings' "Delete account" — a signed-in user can
+      // delete their OWN profile doc (AuthRepository.deleteOwnAccount);
+      // Admin can delete anyone's (AdminRepository.deleteUserProfile,
+      // Phase 5/S-26).
+      allow delete: if isOwner(uid) || isAdmin();
+
+      // ⚠️ SECURITY TODO (flag for a later hardening pass, NFR-05):
+      // `allow update: if isOwner(uid)` currently lets a user edit ANY
+      // field on their own doc, including `role`, `isActive`,
+      // `cgpa`, `isLocked`, and `failedLoginCount`. A malicious user could
+      // self-promote to role: 'admin'. Before production, add field-level
+      // guards, e.g.:
+      //
+      //   allow update: if isOwner(uid) &&
+      //     request.resource.data.role == resource.data.role &&
+      //     request.resource.data.isActive == resource.data.isActive;
+      //
+      // (Admins would then need a separate `allow update: if isAdmin()`
+      // branch without those constraints.)
+
+      // --- users/{uid}/semesters/{semesterId} — Section 9.3 ---
+      match /semesters/{semesterId} {
+        allow read: if isOwner(uid) || isAdmin();
+        // Cloud Functions use the Admin SDK and bypass these rules
+        // entirely, so only the owner needs an explicit write rule here.
+        allow write: if isOwner(uid);
+      }
+
+      // --- users/{uid}/roadmapProgress/{gapKey} — S-17 Progress Tracker ---
+      // 🔶 Not in Section 9's schema tables (9.2-9.5) — added to back
+      // FR-38's "mark certifications as done" checklist (see
+      // lib/features/student/repository/progress_repository.dart).
+      // Owner-only, same access pattern as semesters.
+      match /roadmapProgress/{gapKey} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow write: if isOwner(uid);
+      }
+    }
+
+    // --- jobDescriptions — Section 9.4 / 9.5 ---
+    // 🔶 Phase 4 note: this collection MUST be readable by all signed-in
+    // users (not just Admin) — the AI Job Match screen (S-11) reads it
+    // directly on-device. It was left under the Phase-3-era catch-all
+    // `false` rule below until now; if you deployed rules before Phase 5,
+    // re-deploy with this file or AI Job Match will silently show "no
+    // job roles" for every student.
+    match /jobDescriptions/{jdId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin(); // FR-22 — JD Library (S-28), FR-25 — AI Weighting Config (S-29)
+    }
+
+    // --- courses — master course list (Section 5.4, S-27 Course Master) ---
+    match /courses/{courseId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin(); // FR-22
+    }
+
+    // --- placements/{id} — Section 9.5, FR-20 / FR-40 ---
+    // Recruiters read/write their OWN records (recruiterUid == them);
+    // Admin can read everything. Cloud Functions (Admin SDK) bypass
+    // these rules entirely for any server-side writes.
+    match /placements/{placementId} {
+      allow read: if isAdmin() ||
+        (isSignedIn() && resource.data.recruiterUid == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.recruiterUid == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.recruiterUid == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    // --- feedback/{id} — Section 9.5, S-33 (FR-39, not yet built) ---
+    // Student writes their own feedback doc ONCE; only Admin can read.
+    match /feedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.studentUid == request.auth.uid;
+      allow update, delete: if false; // "write once" per Section 9.5
+    }
+
+    // --- matchResults/{uid} — Section 9.5 ---
+    // Read: the owner + Recruiter (score only, see 🔶 note) + Admin.
+    // Write: Cloud Functions ONLY — see functions/src/triggers/
+    // onStudentGradeUpdated.ts, which is what populates this collection.
+    //
+    // 🔶 "Recruiter (score only)" in the access matrix implies
+    // field-level restriction (a recruiter should see matchPercentage
+    // but not, say, missingSkills/missingCourses for a student they
+    // haven't searched for). Firestore security rules can't do
+    // per-field read filtering — that needs either a separate
+    // recruiter-facing summary collection/view, or filtering in a
+    // Cloud Function HTTPS endpoint instead of a direct client read.
+    // For now this grants any signed-in recruiter full-document read
+    // access (a strict superset of "score only"), which is safe but not
+    // yet the precise field-level restriction the spec describes.
+    match /matchResults/{uid} {
+      allow read: if isOwner(uid) || isAdmin() ||
+        (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'recruiter');
+      allow write: if false; // Cloud Functions (Admin SDK) bypass rules entirely
+
+      match /allMatches/{jdId} {
+        allow read: if isOwner(uid) || isAdmin() ||
+          (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'recruiter');
+        allow write: if false;
+      }
+    }
+
+    // --- notifications/{uid}/items/{itemId} — Section 9.5 ---
+    // Read: the target user + Admin. Write: Cloud Functions + Admin
+    // (e.g. S-30 Broadcast Notification, not yet built).
+    match /notifications/{uid} {
+      match /items/{itemId} {
+        allow read: if isOwner(uid) || isAdmin();
+        // The owner can mark their own notification read/unread; full
+        // creation is Cloud-Functions/Admin-only.
+        allow update: if isOwner(uid) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+        allow create, delete: if isAdmin();
+      }
+    }
+
+    // --- systemLogs/{id} — Section 9.5 ---
+    // Read: Admin only. Write: Cloud Functions only (sendAdminErrorAlert,
+    // and any future trigger that calls logSystemError() —
+    // functions/src/triggers/onStudentGradeUpdated.ts). No UI reads this
+    // yet (S-31 System Error Log isn't built — see PHASE6_GUIDE.md), but
+    // an Admin can already inspect entries via the Firebase Console.
+    match /systemLogs/{logId} {
+      allow read: if isAdmin();
+      // S-31's "Mark Resolved" button — Admin can flip `resolved`, but
+      // not rewrite the log's content (severity/message/source/
+      // occurredAt are Cloud-Functions-authored facts about what
+      // happened, not editable after the fact).
+      allow update: if isAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['resolved']);
+      allow create, delete: if false; // Cloud Functions (Admin SDK) bypass rules entirely
+    }
+
+    // --- mail/{id} — sendAdminErrorAlert's queue for the "Trigger Email"
+    // Firebase Extension (see functions/src/triggers/sendAdminErrorAlert.ts).
+    // Nobody reads or writes this from the client; only the Cloud
+    // Function (write) and the Trigger Email extension (read/update,
+    // also via the Admin SDK) ever touch it.
+    match /mail/{mailId} {
+      allow read, write: if false;
+    }
+
+    // --- Everything else: locked down until its phase is implemented ---
+    // 🔶 Still pending per Section 9.5:
+    //   auditLogs — Admin read, Cloud Functions write only (FR-42, not
+    //   yet built — see PHASE6_GUIDE.md's "remaining screens" list)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

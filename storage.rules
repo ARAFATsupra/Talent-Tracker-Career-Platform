@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// Firebase Storage rules. Section 11's tech stack table lists Firebase
+// Storage for "Profile photos and exported PDFs" — those paths are
+// covered below. The `backups/` path is new in this phase: it's where
+// functions/src/triggers/scheduledDataBackup.ts (Section 14.1) writes
+// its weekly JSON export.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Profile photos — Section 9.2's profilePhotoUrl. Anyone signed in
+    // can view (S-21's recruiter profile view shows the student's
+    // photo); only the owner or an Admin can upload/replace.
+    match /profile_photos/{uid}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(uid) || isAdmin();
+    }
+
+    // Exported PDFs — S-16 Roadmap PDF Export (FR-14), S-23 Export
+    // Report (FR-19). 🔶 Neither screen is built yet (see
+    // PHASE4_GUIDE.md / PHASE5_GUIDE.md); this path is reserved for
+    // when they are. Each export is scoped to the user who generated it.
+    match /exports/{uid}/{fileName} {
+      allow read, write: if isOwner(uid) || isAdmin();
+    }
+
+    // Weekly backups — scheduledDataBackup (Section 14.1). Contains
+    // every active student's full profile + grades + match results in
+    // one JSON file, so this is Admin-only, not even student-readable
+    // for their own data (their own profile/grades are already visible
+    // through the app itself; this is an aggregate operational backup).
+    match /backups/{fileName} {
+      allow read: if isAdmin();
+      allow write: if false; // Cloud Functions (Admin SDK) bypass rules entirely
+    }
+
+    // Everything else: denied by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
